@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>My NFT Explorer</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    My NFT Explorer
+<button class="enableEthereumButton">Enable Ethereum pck</button>
+<script>
+    const ethereumButton = document.querySelector('.enableEthereumButton');
+    console.log(`my_nft_explorer: v0.5`);
+    
+    ethereumButton.addEventListener('click', () => {
+        if (typeof window.ethereum !== 'undefined') {
+            console.log('MetaMask is installed!');
+        } else {
+            console.log(`something is wrong`);
+        }
+        console.log(`networkVersion:${window.ethereum.networkVersion};`);
+        console.log(`selectedAddress:${window.ethereum.selectedAddress};`);
+        //Will Start the metamask extension
+        window.ethereum.request({ method: 'eth_requestAccounts' });
+    });
+    </script>
+</body>
+</html>
