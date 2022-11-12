@@ -1,0 +1,9 @@
+use this command to create the react app:
+my_nft_explorer$ npx create-react-app client
+
+the react app "client" is created in the folder "client"
+
+$ cd client
+
+npm run start
+
