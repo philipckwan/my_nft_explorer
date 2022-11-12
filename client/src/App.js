@@ -191,7 +191,7 @@ function WalletBalances(props) {
             </tr>
             <tr>
               <td>Are you the owner of this NFT?</td>
-              <td>{nftOwnerAddress.toUpperCase() === walletAddress.toUpperCase() ? "Yes" : "No"}</td>
+              <td>n/a - 4</td>
             </tr>
             <tr>
               <td>display this NFT metadata</td>
