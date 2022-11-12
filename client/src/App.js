@@ -5,7 +5,7 @@ const {ethers} = require('ethers');
 const ERC20ABI = require('./abis/ERC20.json');
 const ERC721ABI = require('./abis/ERC721.json');
 
-const version = "v0.22";
+const version = "v0.24";
 const METAMASK_STATUS_NOT_CONNECTED = "metamask is not connected";
 const METAMASK_STATUS_CONNECTED = "metamask is connected";
 const METAMASK_STATUS_NOT_INSTALLED = "metamask is not installed";
@@ -227,6 +227,7 @@ function App() {
     }
     //let myMetamask = window.ethereum;
     //setMetamaskNetworkID(myMetamask.networkVersion);
+    window.ethereum.request({ method: 'eth_requestAccounts' });
     let newMetamask = {...window.ethereum};
     if (metamask === undefined) {
       timeLog(`App.connectMetaMask: metamask network updated from [undefined] to [${newMetamask.networkVersion}];`);
