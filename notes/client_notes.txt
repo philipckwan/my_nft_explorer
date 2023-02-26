@@ -7,3 +7,10 @@ $ cd client
 
 npm run start
 
+
+-need to handle the case when first time connect metamask to this hostname
+ this part currently not working
+             <tr>
+              <td>Are you the owner of this NFT?</td>
+              <td>n/a - 4</td>
+            </tr>

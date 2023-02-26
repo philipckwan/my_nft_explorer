@@ -4,12 +4,41 @@ import './App.css';
 const {ethers} = require('ethers');
 const ERC20ABI = require('./abis/ERC20.json');
 const ERC721ABI = require('./abis/ERC721.json');
+const {abi:ERC1155ABI} = require('./abis/ERC1155.json');
 
 const version = "v0.24";
 const METAMASK_STATUS_NOT_CONNECTED = "metamask is not connected";
 const METAMASK_STATUS_CONNECTED = "metamask is connected";
 const METAMASK_STATUS_NOT_INSTALLED = "metamask is not installed";
 
+const NFT_INTERFACE_ERC1155 = "NFT_INTERFACE_ERC1155";
+const NFT_INTERFACE_ERC721 = "NFT_INTERFACE_ERC721";
+const NFT_INTERFACE_UNKNOWN = "NFT_INTERFACE_UNKNOWN";
+
+const ERC165Abi = [
+  {
+    inputs: [
+      {
+        internalType: "bytes4",
+        name: "interfaceId",
+        type: "bytes4",
+      },
+    ],
+    name: "supportsInterface",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+];
+
+const ERC1155InterfaceId = "0xd9b67a26";
+const ERC721InterfaceId = "0x80ac58cd";
 
 function mapEthereumNetwork(networkID) {
   switch(networkID) {
@@ -36,6 +65,7 @@ function WalletBalances(props) {
   const [nftDescription, setNftDescription] = useState("n/a");
   const [nftTokenURI, setNFTTokenURI] = useState(undefined);
   const [nftImageURI, setNFTImageURI] = useState(undefined);
+  const [erc1155BalanceOf, setErc1155BalanceOf] = useState(0);
 
   useEffect(() => {
     if (props.metamask) {
@@ -80,20 +110,62 @@ function WalletBalances(props) {
     setNFTID(event.target.value);
   }
 
+  async function checkNFTInterface(contractAddress) {
+    timeLog(`checkNFTInterface: 1.0; contractAddress:${contractAddress};`);
+    let erc165Contract = new ethers.Contract(contractAddress, ERC165Abi, new ethers.providers.Web3Provider(props.metamask));
+    let address = erc165Contract.address;
+    timeLog(`__address:${address};`);
+    try {
+      let isERC721 = await erc165Contract.supportsInterface(ERC721InterfaceId);
+      timeLog(`checkNFTInterface: isERC721:${isERC721};`);
+
+      let isERC1155 = await erc165Contract.supportsInterface(ERC1155InterfaceId);
+      timeLog(`checkNFTInterface: isERC1155:${isERC1155};`);
+    
+      if (isERC1155) {
+        return NFT_INTERFACE_ERC1155;
+      }
+      if (isERC721) {
+        return NFT_INTERFACE_ERC721;
+      }
+    } catch (ex) {
+      timeLog(`checkNFTInterface: ERROR - ${ex};`);
+      return NFT_INTERFACE_UNKNOWN;
+    }
+    return NFT_INTERFACE_UNKNOWN;
+  }
+
   async function checkNFT() {
     if (props.metamask === undefined) {
       timeLog(`WalletBalances.checkNFT: ERROR - metamask is not connected`);
       return;
     }
+    const nftType = await checkNFTInterface(nftContractAddress);
     const web3Provider = new ethers.providers.Web3Provider(props.metamask);
+
     try {
-      let nftContract = new ethers.Contract(nftContractAddress, ERC721ABI, web3Provider);
-      setNFTSymbol(await nftContract.symbol());
-
-      let ownerOfThisNFT = await nftContract.ownerOf(nftID);
-      setNFTOwnerAddress(ownerOfThisNFT);
-
-      setNFTTokenURI(await nftContract.tokenURI(nftID));
+      if (nftType === NFT_INTERFACE_ERC1155) {
+        let nftERC1155Contract = new ethers.Contract(nftContractAddress, ERC1155ABI, web3Provider);
+        let thisNftBalance = ethers.utils.formatUnits(await nftERC1155Contract.balanceOf(walletAddress, nftID), 0);
+        setErc1155BalanceOf(thisNftBalance);
+        setNFTTokenURI(await nftERC1155Contract.uri(nftID));
+      } else if (nftType === NFT_INTERFACE_ERC721) {
+        let nftERC721Contract = new ethers.Contract(nftContractAddress, ERC721ABI, web3Provider);
+        setNFTSymbol(await nftERC721Contract.symbol());
+        let ownerOfThisNFT = await nftERC721Contract.ownerOf(nftID);
+        setNFTOwnerAddress(ownerOfThisNFT);
+        setNFTTokenURI(await nftERC721Contract.tokenURI(nftID));
+      } else {
+        // for now, default to ERC-721
+        timeLog(`WalletBalances.checkNFT: nftType is unknown [${nftType}], skipping further checks...`);
+        /*
+        let nftERC721Contract = new ethers.Contract(nftContractAddress, ERC721ABI, web3Provider);
+        setNFTSymbol(await nftERC721Contract.symbol());
+        let ownerOfThisNFT = await nftERC721Contract.ownerOf(nftID);
+        setNFTOwnerAddress(ownerOfThisNFT);
+        setNFTTokenURI(await nftERC721Contract.tokenURI(nftID));
+        */
+      }
     } catch (ex) {
       timeLog(`WalletBalances.checkNFT: ERROR - ${ex};`);
     }
@@ -190,6 +262,10 @@ function WalletBalances(props) {
               <td>{nftOwnerAddress}</td>
             </tr>
             <tr>
+              <td>ERC1155 - balanceOf</td>
+              <td>{erc1155BalanceOf}</td>
+            </tr>            
+            <tr>
               <td>Are you the owner of this NFT?</td>
               <td>n/a - 4</td>
             </tr>
@@ -232,7 +308,7 @@ function App() {
     if (metamask === undefined) {
       timeLog(`App.connectMetaMask: metamask network updated from [undefined] to [${newMetamask.networkVersion}];`);
     } else {
-      timeLog(`App.connectMetaMask: metamask netwrok updated from [${metamask.networkVersion}] to [${newMetamask.networkVersion}];`);
+      timeLog(`App.connectMetaMask: metamask network updated from [${metamask.networkVersion}] to [${newMetamask.networkVersion}];`);
     }
     setMetamask(newMetamask);
     //setWalletAddress(myMetamask.selectedAddress);
